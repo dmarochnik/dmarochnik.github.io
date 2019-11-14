@@ -1,0 +1,74 @@
+--1. Write a stored procedure that will populate the dwAirportsAgg data warehouse table with full replacement updates each time the procedure is run. Include an EXEC statement for your procedure.
+
+ALTER PROC fillAirportsAgg
+AS
+BEGIN
+	--Disable the FK
+	ALTER TABLE dwFlightFacts
+	NOCHECK CONSTRAINT FK__dwFlightF__Arriv__5EBF139D;
+	--Empty the table
+	DELETE FROM dwAirportsAgg;
+	--Fill the table back up
+	INSERT INTO dwAirportsAgg
+	SELECT AirportArrivals.Apt_Code, AirportDepartures.Departures, AirportArrivals.Arrivals,
+	getDate()
+	FROM
+	(SELECT Apt_Code_Arrive AS Apt_Code, COUNT(Flight_ID) AS Arrivals
+	FROM Flights
+	GROUP BY Apt_Code_Arrive) AirportArrivals JOIN
+	(SELECT Apt_Code_Depart AS Apt_Code, COUNT(Flight_ID) AS Departures
+	FROM Flights
+	GROUP BY Apt_Code_Depart) AirportDepartures
+	ON AirportArrivals.Apt_Code = AirportDepartures.Apt_Code;
+	--Enable the FK
+	ALTER TABLE dwFlightFacts
+	CHECK CONSTRAINT FK__dwFlightF__Arriv__5EBF139D;
+END;
+GO
+
+-- Run the fill revenue agg procedure
+EXEC fillAirportsAgg;
+GO
+
+SELECT * FROM dwAirportsAgg;
+GO
+
+
+--2. Write a stored procedure that will populate the dwPlanesDim data warehouse table with a full replacement update each time the procedure is run. In addition to adding data from the transactional database about each plane, this procedure must set a new service status value in the 'ServiceStatus' column of the dwPlanesDim table. The stored procedure must accept two numbers as arguments: (a) The number of days since the aircraft was last serviced that will indicate when that aircraft's service status will change from "Current" to "Needs Service Soon"; and (b) The number of days since the aircraft was last serviced that will indicate when that aircraft's service status will change from "Needs Service Soon" to "Can't Fly Until Serviced". When executed with these two numeric arguments, the procedure should accurately set the 'ServiceStatus' for each plane in the dwPlanesDim table, based on the current system date. Include an EXEC statement for your procedure.
+
+
+ALTER PROC fillPlanes
+	(@vFlag1 INT, @vFlag2 INT)
+AS
+BEGIN
+	--Turn off the FK check 
+	ALTER TABLE dwFlightFacts
+	NOCHECK CONSTRAINT FK__dwFlightF__Plane__5DCAEF64;
+	--Clean out the table
+	DELETE FROM dwPlanesDim;
+	--Re-populate the table
+	INSERT INTO dwPlanesDim
+	SELECT Plane_ID, Plane_Mfg, Plane_Model, Purch_Date, Num_Seats, Serv_Date,
+		CASE
+			WHEN DATEDIFF(DAY, Serv_Date, getDATE()) < @vFlag1 THEN 'Current'
+			WHEN DATEDIFF(DAY, Serv_Date, getDATE()) < @vFlag2 THEN 'Needs Service Soon'
+			ELSE 'Can''t Fly'
+		END, getDate()
+	FROM Planes 
+	--Turn the FK ID check back on
+	ALTER TABLE dwFlightFacts
+	CHECK CONSTRAINT FK__dwFlightF__Plane__5DCAEF64;
+END;
+GO
+
+EXEC fillPlanes 60, 120;
+GO
+
+
+SELECT * FROM dwPlanesDim
+
+UPDATE Planes
+SET serv_date = '10/15/2019'
+WHERE Plane_ID = 107
+
+
