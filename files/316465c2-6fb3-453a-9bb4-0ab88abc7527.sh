@@ -1,10 +1,10 @@
 #!/bin/bash
-#I, Daria Marochnik, made this script. It is original.
+#Daria Marochnik
 #March 7, 2019
-#Version 1.0
+#Version 1.4
 #
-read -p "Ho ho ho! Please enter your name: " NAME
-echo "Hello, $NAME. I'm BoBo, and I'm bored. Will you play a game with me?"
+read -p "Please enter your name: " NAME
+echo "Hello, $NAME. I'm Jim, and I'm bored. Will you play a game with me?"
 read -p "Enter Y for yes: " Y
 echo "You're the best, $NAME. OK, I picked a number between 1 and 100."
 n1=$[($RANDOM % 100) +1]
